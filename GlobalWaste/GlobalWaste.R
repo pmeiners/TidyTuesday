@@ -5,7 +5,9 @@ Paul Meiners
 '
 
 library(tidyverse)
-
+theme_set(theme_minimal())
+library(ggrepel)
+library(viridis)
 # ------------------- Cleaning ------------------ #
 
 # load raw data
@@ -46,13 +48,19 @@ ggplot(data=subset(data_clean, !is.na(waste_mis_total)), aes(x=waste_mis_total, 
   # total waste is produced by the large countries. 
   # The relationship is however not direct, the toal waste is lower than you would expect from countries with high coastal population.
 
-ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x=waste_mis_pcap, y=coast_pop)) + 
-  geom_point()+
-  geom_smooth()
-  # some countries have low coastal population but still very high waste per capita. 
-  # Countries with very high coastal population have comaparatively low waste per capita
+ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_pcap), y = log(coast_pop))) + 
+  geom_point(aes(color = gdp_pcap), size = 3) +
+  geom_text_repel(aes(label=ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
+                   box.padding   = 0.35, 
+                   point.padding = 0.5,
+                   segment.color = 'grey50') +
+  scale_color_viridis()
 
-# Add waste per coastal population 
+  # countries with high waste per capita are mostly Island countries
+  # also: Richer countries generally have low per capita waste, high per capita waste countries have all low gdp per capita
+
+
+
 
 
 
