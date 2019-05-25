@@ -25,9 +25,9 @@ names(data_all)[4:9] <- c("waste_mis_total", "coast_pop", "total_pop", "cntry", 
 names(data_all)[12] <- c("waste_total_pcap")
 
 # select only necessary columns
-data_clean <- select(data_all, waste_mis_total:gdp_pcap, waste_total_pcap, Year, Code)
+data_clean <- select(data_all, waste_mis_total, cntry, waste_mis_pcap, coast_pop, gdp_pcap, waste_total_pcap, total_pop, Year, Code)
 
-data_clean <- mutate(data_all, gdp = total_pop*gdp_pcap)
+data_clean <- mutate(data_clean, gdp = total_pop*gdp_pcap)
 
 saveRDS(data_clean, file="data_clean.rds")
 
@@ -60,7 +60,7 @@ ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_
   scale_color_viridis()
 
 # Waste pcap and total population
-ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_pcap), y = log(coast_pop))) + 
+ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_pcap), y = log(total_pop))) + 
   geom_point(aes(color = gdp_pcap), size = 3) +
   geom_text_repel(aes(label=ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
                   box.padding   = 0.35, 
@@ -104,14 +104,21 @@ data_clean <- data_clean %>%
 
 
 # Heatmap of changes:
+# Adding missing obs
+data_clean <- data_clean %>% 
+  group_by(cntry) %>% 
+  fill(waste_mis_pcap, waste_mis_total) %>% #default direction down
+  fill(waste_mis_pcap, waste_mis_total, .direction = "up")
 
-data_clean$cntry <- factor(data_clean$cntry, levels=unique(data_clean$cntry)[order(data_clean$waste_mis_pcap)])
-
-ggplot(data = data_clean, aes(x = Year, y = cntry, z = gdp_pcap_change)) + 
-  geom_tile(aes(fill = gdp_pcap_change)) +
+# sorted by total population change
+ggplot(data = data_clean, aes(x = Year, y = reorder(cntry, -waste_mis_pcap), z = total_pop_change)) + 
+  geom_tile(aes(fill = total_pop_change)) +
   scale_fill_viridis()
 
-
+# sorted by GDP change
+ggplot(data = data_clean, aes(x = Year, y = reorder(cntry, -waste_mis_pcap), z = gdp_pcap_change)) + 
+  geom_tile(aes(fill = gdp_pcap_change)) +
+  scale_fill_viridis()
 
 
 
