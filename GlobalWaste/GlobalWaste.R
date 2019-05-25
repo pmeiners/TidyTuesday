@@ -58,6 +58,7 @@ ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_
                    point.padding = 0.5,
                    segment.color = 'grey50') +
   scale_color_viridis()
+
 # Waste pcap and total population
 ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_pcap), y = log(coast_pop))) + 
   geom_point(aes(color = gdp_pcap), size = 3) +
@@ -102,15 +103,18 @@ data_clean <- data_clean %>%
   mutate(total_pop_change = (total_pop/lag(total_pop) - 1) * 100)
 
 
+# Heatmap of changes:
 
-ggplot(data=subset(data_clean, !is.na(gdp_pcap_change)), aes(x=gdp_pcap_change)) + 
-  geom_histogram(stat="bin")
+data_clean$cntry <- factor(data_clean$cntry, levels=unique(data_clean$cntry)[order(data_clean$waste_mis_pcap)])
 
-ggplot(data=subset(data_clean, !is.na(total_pop_change)), aes(x=total_pop_change)) + 
-  geom_histogram(stat="bin")
+ggplot(data = data_clean, aes(x = Year, y = cntry, z = gdp_pcap_change)) + 
+  geom_tile(aes(fill = gdp_pcap_change)) +
+  scale_fill_viridis()
 
-ggplot(data = data_clean, aes(x = total_pop_change, y = gdp_pcap_change))+
-  geom_point()
+
+
+
+
   
 
 
