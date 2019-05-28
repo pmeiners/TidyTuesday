@@ -6,8 +6,9 @@ Paul Meiners
 
 library(tidyverse)
 theme_set(theme_minimal())
-library(ggrepel)
-library(viridis)
+library(ggrepel) # to move labels away from information in plots
+library(viridis) # an easy to read color sheme 
+library(scales) # to easily change the scales on the heatmaps
 # ------------------- Cleaning ------------------ #
 
 # load raw data
@@ -27,34 +28,33 @@ names(data_all)[12] <- c("waste_total_pcap")
 # select only necessary columns
 data_clean <- select(data_all, waste_mis_total, cntry, waste_mis_pcap, coast_pop, gdp_pcap, waste_total_pcap, total_pop, Year, Code)
 
-data_clean <- mutate(data_clean, gdp = total_pop*gdp_pcap)
+data_clean <- mutate(data_clean, gdp = total_pop*gdp_pcap) %>%
+  mutate(waste_total_total = waste_total_pcap*total_pop)
 
 saveRDS(data_clean, file="data_clean.rds")
 
 #--------------------- Exploratory data analysis---------------- #
 
-# Data on total waste exists only for 2010. But the time-series data on population and gdp growth can still be interesting. 
-# Countries could be divided into "stalbe, low gdp/pop "fast growing" and "stable high gdp/pop" categories.
 
-ggplot(data=subset(data_clean, !is.na(coast_pop)), aes(x=coast_pop)) + 
-  geom_bar(stat="bin")
+ggplot(data = subset(data_clean, !is.na(coast_pop)), aes(x = coast_pop)) + 
+  geom_bar(stat = "bin")
   # Most countries have no costal population
 
-ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x=waste_mis_pcap)) + 
-  geom_bar(stat="bin")
+ggplot(data = subset(data_clean, !is.na(waste_mis_pcap)), aes(x = waste_mis_pcap)) + 
+  geom_bar(stat = "bin")
   # Also logarithmic distribution, a small number of countries has very high waste per capita.
 
-ggplot(data=subset(data_clean, !is.na(waste_mis_total)), aes(x=waste_mis_total, y=coast_pop)) + 
+ggplot(data = subset(data_clean, !is.na(waste_mis_total)), aes(x = waste_mis_total, y = coast_pop)) + 
   geom_point()+
   geom_smooth()
   # total waste is produced by the large countries. 
   # The relationship is however not direct, the toal waste is lower than you would expect from countries with high coastal population.
 
 # Waste pcap and coastal population
-ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_pcap), y = log(coast_pop))) + 
+ggplot(data = subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_pcap), y = log(coast_pop))) + 
   geom_point(aes(color = gdp_pcap), size = 3) +
-  geom_text_repel(aes(label=ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
-                   box.padding   = 0.35, 
+  geom_text_repel(aes(label = ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
+                   box.padding = 0.35, 
                    point.padding = 0.5,
                    segment.color = 'grey50') +
   scale_color_viridis()
@@ -62,8 +62,8 @@ ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_
 # Waste pcap and total population
 ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_pcap), y = log(total_pop))) + 
   geom_point(aes(color = gdp_pcap), size = 3) +
-  geom_text_repel(aes(label=ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
-                  box.padding   = 0.35, 
+  geom_text_repel(aes(label = ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
+                  box.padding = 0.35, 
                   point.padding = 0.5,
                   segment.color = 'grey50') +
   scale_color_viridis()
@@ -73,8 +73,8 @@ ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log1p(waste_mis_
 
 ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log(gdp_pcap), y = log(waste_mis_total))) + 
   geom_point(aes(color = waste_mis_pcap), size = 3) +
-  geom_text_repel(aes(label=ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
-                  box.padding   = 0.35, 
+  geom_text_repel(aes(label = ifelse(log1p(waste_mis_pcap)>0.12,as.character(cntry),'')),
+                  box.padding = 0.35, 
                   point.padding = 0.5,
                   segment.color = 'grey50') +
   geom_smooth()+
@@ -87,6 +87,9 @@ ggplot(data=subset(data_clean, !is.na(waste_mis_pcap)), aes(x = log(gdp_pcap), y
 
 
 # --- Integrating time effects --- #
+
+# Data on total waste exists only for 2010. But the time-series data on population and gdp growth can still be interesting. 
+# Countries could be divided into "stalbe, low gdp/pop "fast growing" and "stable high gdp/pop" categories.
 
 # GDP per capita change compared to last year:
 data_clean <- data_clean %>%
@@ -107,19 +110,28 @@ data_clean <- data_clean %>%
 # Adding missing obs
 data_clean <- data_clean %>% 
   group_by(cntry) %>% 
-  fill(waste_mis_pcap, waste_mis_total) %>% #default direction down
-  fill(waste_mis_pcap, waste_mis_total, .direction = "up")
+  fill(waste_mis_pcap, waste_mis_total, waste_total_total) %>% #default direction down
+  fill(waste_mis_pcap, waste_mis_total, waste_total_total, .direction = "up")
 
-# sorted by total population change
+# filled by population change sorted by mismanaged waste per capita
 ggplot(data = data_clean, aes(x = Year, y = reorder(cntry, -waste_mis_pcap), z = total_pop_change)) + 
   geom_tile(aes(fill = total_pop_change)) +
-  scale_fill_viridis()
+  scale_fill_viridis(limits = c(-3, 10),oob = scales::squish)
 
-# sorted by GDP change
+# filled by population change sorted by total mismanaged waste
+ggplot(data = data_clean, aes(x = Year, y = reorder(cntry, -waste_total_total), z = gdp_pcap_change)) + 
+  geom_tile(aes(fill = total_pop_change)) +
+  scale_fill_viridis(limits = c(-3, 10),oob = scales::squish)
+
+# filled by gdp change sorted by mismanaged waste per capita
 ggplot(data = data_clean, aes(x = Year, y = reorder(cntry, -waste_mis_pcap), z = gdp_pcap_change)) + 
   geom_tile(aes(fill = gdp_pcap_change)) +
-  scale_fill_viridis()
+  scale_fill_viridis(limits = c(-30, 30),oob = scales::squish)
 
+# filled by gdp change sorted by total mismanaged waste
+ggplot(data = data_clean, aes(x = Year, y = reorder(cntry, -waste_total_total), z = gdp_pcap_change)) + 
+  geom_tile(aes(fill = gdp_pcap_change)) +
+  scale_fill_viridis(limits = c(-30, 30),oob = scales::squish)
 
 
   
