@@ -6,6 +6,8 @@ Paul Meiners
 library(readr)
 library(tidyverse)
 theme_set(theme_bw())
+library(ggrepel) # to move labels away from information in plots
+
 
 
 
@@ -22,7 +24,17 @@ wine_ratings %>%
   filter(!is.na(price)) %>% 
   group_by(points) %>% 
   summarise(median = median(price)) %>% 
-  ggplot(mapping = aes(x = points, y = median))+
+  ggplot(mapping = aes(x = points, y = median)) +
   geom_col()
+
+# However, there is only a small number of wines available for the very high points sections.
+
+wine_ratings %>%
+  filter(!is.na(price)) %>% 
+  ggplot(mapping = aes(x = points, y = price, group = points))+
+  geom_boxplot()
+
+# The boxplot shows that we have a number of extreme outliers. Which wines are that expensive?
+
 
 
