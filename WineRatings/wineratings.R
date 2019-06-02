@@ -14,11 +14,15 @@ wine_ratings <- readr::read_csv("https://raw.githubusercontent.com/rfordatascien
 names(wine_ratings)[1] <- c("id")
 
 
-wr_edit <- mutate(wine_ratings, ppp = points/price) %>% 
-  filter(!is.na(price))
+saveRDS(wine_ratings, file="wine_ratings.rds")
 
+# first we can try to create similar graphs as in the article
 
-
-
+wine_ratings %>%
+  filter(!is.na(price)) %>% 
+  group_by(points) %>% 
+  summarise(median = median(price)) %>% 
+  ggplot(mapping = aes(x = points, y = median))+
+  geom_col()
 
 
